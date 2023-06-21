@@ -1,6 +1,6 @@
 package dto
 
-type OrderInput struct {
+type TradeInput struct {
 	OrderID       string  `json:"order_id"`
 	InvestorID    string  `json:"investor_id"`
 	AssetID       string  `json:"asset_id"`
