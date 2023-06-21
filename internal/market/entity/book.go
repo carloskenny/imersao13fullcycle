@@ -25,25 +25,40 @@ func NewBook(orderChanIn chan *Order, orderChanOut chan *Order, wg *sync.WaitGro
 
 func (b *Book) Trade() {
 	//fila de ordens de compra
-	buyOrders := NewOrderQueue()
+	// buyOrders := NewOrderQueue()
+	// criando uma mapa para classificar as filas de acordo com os Assets
+	buyOrders := make(map[string]*OrderQueue)
 
 	//fila de ordens de venda
-	sellOrders := NewOrderQueue()
+	// sellOrders := NewOrderQueue()
+	sellOrders := make(map[string]*OrderQueue)
 
-	heap.Init(buyOrders)
-	heap.Init(sellOrders)
+	// heap.Init(buyOrders)
+	// heap.Init(sellOrders)
 
 	//percorre todas as ordens de entrada
 	for order := range b.OrdersChanIn {
+		asset := order.Asset.ID
+
+		if buyOrders[asset] == nil {
+			buyOrders[asset] = NewOrderQueue()
+			heap.Init((buyOrders[asset]))
+		}
+
+		if sellOrders[asset] == nil {
+			sellOrders[asset] = NewOrderQueue()
+			heap.Init(sellOrders[asset])
+		}
+
 		// verifica se a orden é de compra
 		if order.OrderType == "BUY" {
 			//adiciona a ordens na fila de compra
-			buyOrders.Push(order)
+			buyOrders[asset].Push(order)
 			// verifica se existe ordem de venda na fila de ordens de venda e
 			// se o preço da ordem de venda é menor ou igual ao preço da ordem de venda
-			if sellOrders.Len() > 0 && sellOrders.Orders[0].Price <= order.Price {
+			if sellOrders[asset].Len() > 0 && sellOrders[asset].Orders[0].Price <= order.Price {
 				//se existir remove essa ordem da fila de ordens de venda
-				sellOrder := sellOrders.Pop().(*Order)
+				sellOrder := sellOrders[asset].Pop().(*Order)
 				//verifica de existem cotas pendentes para venda.
 				if sellOrder.PendingShares > 0 {
 					//cria uma nova transação de venda de cotas
@@ -60,14 +75,15 @@ func (b *Book) Trade() {
 
 					//verificar se ainda existem cotas pendentes, se tiver adiciona a ordens novamente na fila de ordens de venda
 					if sellOrder.PendingShares > 0 {
-						sellOrders.Push(sellOrders)
+						sellOrders[asset].Push(sellOrders[asset])
 					}
 				}
 			}
 		} else if order.OrderType == "SELL" {
-			sellOrders.Push(order)
-			if buyOrders.Len() > 0 && buyOrders.Orders[0].Price >= order.Price {
-				buyOrder := buyOrders.Pop().(*Order)
+
+			sellOrders[asset].Push(order)
+			if buyOrders[asset].Len() > 0 && buyOrders[asset].Orders[0].Price >= order.Price {
+				buyOrder := buyOrders[asset].Pop().(*Order)
 				if buyOrder.PendingShares > 0 {
 					transaction := NewTransaction(order, buyOrder, order.Shares, buyOrder.Price)
 					b.AddTransaction(transaction, b.Wg)
@@ -76,7 +92,7 @@ func (b *Book) Trade() {
 					b.OrdersChanOut <- buyOrder
 					b.OrdersChanOut <- order
 					if buyOrder.PendingShares > 0 {
-						buyOrders.Push(buyOrder)
+						buyOrders[asset].Push(buyOrder)
 
 					}
 				}
