@@ -7,7 +7,7 @@ import (
 
 type Book struct {
 	Order         []*Order
-	Transaction   []*Transaction
+	Transactions  []*Transaction
 	OrdersChanIn  chan *Order
 	OrdersChanOut chan *Order
 	Wg            *sync.WaitGroup
@@ -16,7 +16,7 @@ type Book struct {
 func NewBook(orderChanIn chan *Order, orderChanOut chan *Order, wg *sync.WaitGroup) *Book {
 	return &Book{
 		Order:         []*Order{},
-		Transaction:   []*Transaction{},
+		Transactions:  []*Transaction{},
 		OrdersChanIn:  orderChanIn,
 		OrdersChanOut: orderChanOut,
 		Wg:            wg,
@@ -110,6 +110,5 @@ func (b *Book) AddTransaction(transaction *Transaction, wg *sync.WaitGroup) {
 	transaction.CloserBuyOrder()
 	transaction.CloserSellOrder()
 
-	b.Transaction = append(b.Transaction, transaction)
-
+	b.Transactions = append(b.Transactions, transaction)
 }
